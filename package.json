@@ -1,0 +1,24 @@
+{
+  "name": "rls-claude-usage",
+  "version": "1.0.0",
+  "description": "Keep a permanent ledger of what your Claude Code sessions cost, grouped by the tag in the session title.",
+  "type": "module",
+  "bin": {
+    "rls-claude-usage": "bin/rls-claude-usage.mjs"
+  },
+  "files": [
+    "bin",
+    "lib"
+  ],
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18.18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RLS-Marketing/rls-claude-usage.git"
+  },
+  "license": "UNLICENSED"
+}
