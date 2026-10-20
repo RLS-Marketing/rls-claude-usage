@@ -25,6 +25,7 @@ Filters (report, summary, list)
   --tag <a,b>       sessions with this tag — the title before the first "|"
                     ("Webshop | Checkout" has tag "Webshop"); "untagged" for none
   --search <text>   title, project path or session id contains the text
+  --title <text>    title contains the text (the title only, anywhere in it)
   --project <text>  project path contains the text
   --session <id>    session id starts with this
   --since <date>    started on or after YYYY-MM-DD (local time)
@@ -49,7 +50,7 @@ try {
   parsed = parseArgs({
     allowPositionals: true,
     options: {
-      tag: { type: 'string' }, search: { type: 'string' }, project: { type: 'string' },
+      tag: { type: 'string' }, search: { type: 'string' }, title: { type: 'string' }, project: { type: 'string' },
       session: { type: 'string' }, since: { type: 'string' }, until: { type: 'string' },
       month: { type: 'string' }, by: { type: 'string', default: 'tag' },
       csv: { type: 'boolean' }, json: { type: 'boolean' }, out: { type: 'string' },

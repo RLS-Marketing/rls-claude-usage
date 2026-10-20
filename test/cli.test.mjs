@@ -76,6 +76,9 @@ test('summary groups by tag (case-insensitively, newest spelling) and by month',
 
 test('filters: search, since/until, month, session prefix', () => {
   assert.deepEqual(json('--search', 'sentry').map((s) => s.id.slice(0, 4)), ['bbbb']);
+  assert.deepEqual(json('--title', 'SENTRY').map((s) => s.id.slice(0, 4)), ['bbbb']);
+  assert.deepEqual(json('--title', 'demo'), [], '--title ignores the project path');
+  assert.deepEqual(json('--title', 'aaaa'), [], '--title ignores the session id');
   assert.deepEqual(json('--since', '2026-10-13').map((s) => s.id.slice(0, 4)), ['cccc']);
   assert.deepEqual(json('--until', '2026-09-30').map((s) => s.id.slice(0, 4)), ['bbbb']);
   assert.deepEqual(json('--month', '2026-09').map((s) => s.id.slice(0, 4)), ['bbbb']);

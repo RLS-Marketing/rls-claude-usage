@@ -81,8 +81,8 @@ Rules of thumb:
   has its transcript. For an older session, set the tag by hand:
   `rls-claude-usage retag 7f3c2a91 "Webshop"` (`""` returns to the title's tag).
 
-Don't want tags? `--search` matches any part of the title, the project path or
-the session id.
+Don't want tags? `--title` matches any part of the title (and nothing else);
+`--search` matches any part of the title, the project path or the session id.
 
 ## Use
 
@@ -91,6 +91,7 @@ rls-claude-usage                          # totals per tag, then every session
 rls-claude-usage --tag Webshop            # one project
 rls-claude-usage --tag "Webshop,Docs"     # several
 rls-claude-usage --tag untagged           # sessions still to be tagged
+rls-claude-usage --title checkout         # title (only) contains "checkout"
 rls-claude-usage --search checkout        # title / project path / id contains "checkout"
 rls-claude-usage --project website        # sessions run in a folder whose path contains "website"
 rls-claude-usage --month 2026-10          # one month (local time)
