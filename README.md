@@ -15,9 +15,9 @@ Webshop            3  15.05  2026-10-12  2026-10-19
 Docs               1   4.22  2026-10-02  2026-10-02
 total              8  28.88
 
-started           session     USD  project   title
-2026-10-19 11:07  7f3c2a91  11.47*  website   Webshop | Checkout - second attempt
-2026-10-15 12:37  b41e9d07   2.06   website   Webshop | Checkout - first attempt
+started           session      USD  tag      project  title
+2026-10-19 11:07  7f3c2a91  11.47*  Webshop  website  Webshop | Checkout - second attempt
+2026-10-15 12:37  b41e9d07   2.06   Webshop  website  Webshop | Checkout - first attempt
 ...
 ```
 
