@@ -85,6 +85,13 @@ test('filters: search, since/until, month, session prefix', () => {
   assert.deepEqual(json('--session', 'aaaa').map((s) => s.id.slice(0, 4)), ['aaaa']);
 });
 
+test('list: a separator line between sessions started on different days', () => {
+  writeSession('dddd4444-0000', [assistant('m1', '2026-10-13T09:00:00Z', usage)]);
+  const lines = run('list').split('\n').filter((l) => /^(\d{4}-|-+$)/.test(l));
+  assert.deepEqual(lines.map((l) => (l.startsWith('-') ? '---' : l.slice(0, 10))),
+    ['2026-10-13', '2026-10-13', '---', '2026-10-12', '---', '2026-09-01']);
+});
+
 test('the ledger keeps a session after Claude Code deletes its transcript', () => {
   run('sync');
   fs.rmSync(path.join(projects, 'demo', 'bbbb2222-0000.jsonl'));
