@@ -6,19 +6,21 @@ outlives the transcripts**, and reports the totals grouped by project tag,
 project folder, month or day.
 
 ```text
-$ rls-claude-usage --since 2026-10-01
+$ rls-claude-usage
 Ledger C:\Users\you\.rls-claude-usage\ledger.json — 2 new, 1 updated
+Period 2026-10 (this month)
+
+started           session      USD  tag      project  title
+2026-10-02 09:12  3a9c55e0   4.22   Docs     docs     Docs | IT setup
+...
+2026-10-15 12:37  b41e9d07   2.06   Webshop  website  Webshop | Checkout - first attempt
+2026-10-19 11:07  7f3c2a91  11.47*  Webshop  website  Webshop | Checkout - second attempt
 
 tag         sessions    USD  first       last
 Webshop            3  15.05  2026-10-12  2026-10-19
 (untagged)         4   9.61  2026-10-08  2026-10-19
 Docs               1   4.22  2026-10-02  2026-10-02
 total              8  28.88
-
-started           session      USD  tag      project  title
-2026-10-19 11:07  7f3c2a91  11.47*  Webshop  website  Webshop | Checkout - second attempt
-2026-10-15 12:37  b41e9d07   2.06   Webshop  website  Webshop | Checkout - first attempt
-...
 ```
 
 No dependencies — Node.js 18.18 or newer is all it needs. Works on Windows,
@@ -87,22 +89,57 @@ Don't want tags? `--title` matches any part of the title (and nothing else);
 ## Use
 
 ```bash
-rls-claude-usage                          # totals per tag, then every session
+rls-claude-usage                          # this month: every session, then totals per tag
 rls-claude-usage --tag Webshop            # one project
 rls-claude-usage --tag "Webshop,Docs"     # several
 rls-claude-usage --tag untagged           # sessions still to be tagged
 rls-claude-usage --title checkout         # title (only) contains "checkout"
 rls-claude-usage --search checkout        # title / project path / id contains "checkout"
 rls-claude-usage --project website        # sessions run in a folder whose path contains "website"
-rls-claude-usage --month 2026-10          # one month (local time)
-rls-claude-usage --since 2026-10-01 --until 2026-10-15
 
-rls-claude-usage summary --by month       # totals only: by tag | project | month | day
-rls-claude-usage summary --by month --tag Webshop
+rls-claude-usage summary --this-year --by month   # totals only: by tag | project | month | day
+rls-claude-usage summary --all --by month --tag Webshop
 rls-claude-usage list --tag Webshop       # sessions only
 
 rls-claude-usage list --csv --out october.csv --month 2026-10   # for Excel / sharing
 rls-claude-usage summary --json                                 # for scripts
+```
+
+### Period
+
+Without a period option, `report`, `summary` and `list` cover **the current
+month**. Pick one of (local time):
+
+| Option                | Period                                            |
+|-----------------------|---------------------------------------------------|
+| `--this-month`        | the current calendar month (the default)          |
+| `--last-month`        | the previous calendar month                       |
+| `--month 2026-07`     | any month                                         |
+| `--this-year`         | the current calendar year, 1 January to today     |
+| `--last-year`         | the previous calendar year                        |
+| `--year 2025`         | any calendar year                                 |
+| `--last-12-months`    | the current month and the 11 before it            |
+| `--all`               | all history                                       |
+| `--since` / `--until` | any range, `YYYY-MM-DD` (either end may be open)  |
+
+`--session <id>` looks in all history unless a period is given.
+
+With a year-long period (the year options, `--last-12-months`, `--all`,
+`--since/--until`), **`--monthly`** replaces the session list with one row per
+tag and one column per month (`--by project` for project folders; `--csv` and
+`--json` work too):
+
+```bash
+rls-claude-usage --this-year --monthly
+rls-claude-usage --last-12-months --monthly --by project
+rls-claude-usage --year 2025 --monthly --csv --out 2025.csv
+```
+
+```text
+tag        2026-01  ...  2026-09  2026-10  2026-11   total
+Webshop          ·  ...        ·    51.37    83.68  135.05
+Docs             ·  ...     4.22    10.35        ·   14.56
+total            ·  ...     4.22    61.72    83.68  149.61
 ```
 
 Every command first syncs the ledger with the transcripts (fast: only sessions

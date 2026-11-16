@@ -5,14 +5,16 @@ import { parseArgs } from 'node:util';
 import { defaultLedgerPath, loadLedger, saveLedger, syncLedger } from '../lib/ledger.mjs';
 import { installHook, uninstallHook, hookStatus, settingsPath } from '../lib/hook.mjs';
 import { projectsDir } from '../lib/transcripts.mjs';
-import { filterSessions, formatGroups, formatSessions, groupSessions, GROUPS, toCsv, toJson } from '../lib/report.mjs';
+import { filterSessions, formatGroups, formatMonthly, formatSessions, groupSessions, GROUPS, monthlyBreakdown, monthlyCsv,
+  toCsv, toJson } from '../lib/report.mjs';
+import { resolvePeriod } from '../lib/period.mjs';
 
 const HELP = `rls-claude-usage — a permanent ledger of what your Claude Code sessions cost
 
 Usage: rls-claude-usage [command] [options]
 
 Commands
-  report            (default) totals per tag, then the sessions
+  report            (default) the sessions, then totals per tag — this month
   summary           totals only
   list              sessions only
   sync              update the ledger from the transcripts, print nothing else
@@ -21,19 +23,32 @@ Commands
   uninstall-hook    remove it
   where             print the ledger, transcript and settings paths
 
+Period (report, summary, list) — one of; default --this-month
+  --this-month      the current calendar month
+  --last-month      the previous calendar month
+  --month <YYYY-MM> any month
+  --this-year       the current calendar year, 1 January to today
+  --last-year       the previous calendar year
+  --year <YYYY>     any calendar year
+  --last-12-months  the current month and the 11 before it
+  --all             all history
+  --since <date>    started on or after YYYY-MM-DD (local time)
+  --until <date>    started on or before YYYY-MM-DD
+  --monthly         with a year-long period (the year options, --all, --since/--until):
+                    totals per tag and month instead of the sessions
+
 Filters (report, summary, list)
   --tag <a,b>       sessions with this tag — the title before the first "|"
                     ("Webshop | Checkout" has tag "Webshop"); "untagged" for none
   --search <text>   title, project path or session id contains the text
   --title <text>    title contains the text (the title only, anywhere in it)
   --project <text>  project path contains the text
-  --session <id>    session id starts with this
-  --since <date>    started on or after YYYY-MM-DD (local time)
-  --until <date>    started on or before YYYY-MM-DD
-  --month <YYYY-MM> started in this month
+  --session <id>    session id starts with this (searches all history unless a
+                    period is given)
 
 Output
-  --by <key>        group totals by ${GROUPS.join(' | ')} (default tag)
+  --by <key>        group totals by ${GROUPS.join(' | ')} (default tag;
+                    with --monthly: tag | project)
   --csv, --json     machine-readable output (sessions; with "summary", the totals)
   --out <file>      write the output to a file instead of the terminal
 
@@ -52,7 +67,9 @@ try {
     options: {
       tag: { type: 'string' }, search: { type: 'string' }, title: { type: 'string' }, project: { type: 'string' },
       session: { type: 'string' }, since: { type: 'string' }, until: { type: 'string' },
-      month: { type: 'string' }, by: { type: 'string', default: 'tag' },
+      month: { type: 'string' }, year: { type: 'string' }, 'this-month': { type: 'boolean' },
+      'last-month': { type: 'boolean' }, 'this-year': { type: 'boolean' }, 'last-year': { type: 'boolean' },
+      'last-12-months': { type: 'boolean' }, all: { type: 'boolean' }, monthly: { type: 'boolean' }, by: { type: 'string', default: 'tag' },
       csv: { type: 'boolean' }, json: { type: 'boolean' }, out: { type: 'string' },
       'no-sync': { type: 'boolean' }, ledger: { type: 'string' }, quiet: { type: 'boolean' },
       help: { type: 'boolean', short: 'h' },
@@ -102,19 +119,34 @@ if (o.help || command === 'help') {
   process.exit(0);
 }
 
-for (const [k, re] of [['since', /^\d{4}-\d{2}-\d{2}$/], ['until', /^\d{4}-\d{2}-\d{2}$/], ['month', /^\d{4}-\d{2}$/]]) {
-  if (o[k] && !re.test(o[k])) fail(`--${k} ${o[k]}: expected ${k === 'month' ? 'YYYY-MM' : 'YYYY-MM-DD'}`);
+for (const k of ['since', 'until']) {
+  if (o[k] && !/^\d{4}-\d{2}-\d{2}$/.test(o[k])) fail(`--${k} ${o[k]}: expected YYYY-MM-DD`);
 }
 if (!GROUPS.includes(o.by)) fail(`--by ${o.by}: expected one of ${GROUPS.join(', ')}`);
 if (o.csv && o.json) fail('--csv and --json: pick one');
+let period;
+try {
+  period = resolvePeriod(o);
+} catch (e) {
+  fail(e.message);
+}
+if (o.monthly && !period.yearly) fail(`--monthly: needs a year-long period (--this-year, --last-year, --year, --last-12-months, --all, --since/--until), not ${period.label}`);
+if (o.monthly && !['tag', 'project'].includes(o.by)) fail(`--monthly --by ${o.by}: expected tag or project`);
 
 switch (command) {
   case 'report':
   case 'summary':
   case 'list': {
     const { ledger, stats } = openLedger();
-    const sessions = filterSessions(ledger, o);
-    if (command === 'summary') {
+    const sessions = filterSessions(ledger, { ...o, since: period.since, until: period.until });
+    const header = `Ledger ${ledgerFile} — ${syncNote(stats)}\nPeriod ${period.label}`;
+    if (o.monthly) {
+      const b = monthlyBreakdown(sessions, o.by, period.since?.slice(0, 7), period.until?.slice(0, 7));
+      if (o.json) emit(JSON.stringify(b.rows, null, 2));
+      else if (o.csv) emit(monthlyCsv(b));
+      else if (!sessions.length) emit(`${header}\n\nNo sessions match.`);
+      else emit(command === 'report' ? `${header}\n\n${formatMonthly(b)}` : formatMonthly(b));
+    } else if (command === 'summary') {
       const groups = groupSessions(sessions, o.by);
       if (o.json) emit(JSON.stringify(groups, null, 2));
       else if (o.csv) emit([`${o.by},sessions,usd,first,last`, ...groups.map((g) => [g[o.by], g.sessions, g.usd.toFixed(4), g.first, g.last]
@@ -124,9 +156,8 @@ switch (command) {
     else if (o.csv) emit(toCsv(sessions));
     else if (command === 'list') emit(formatSessions(sessions));
     else {
-      const header = `Ledger ${ledgerFile} — ${syncNote(stats)}`;
       emit(sessions.length
-        ? `${header}\n\n${formatGroups(groupSessions(sessions, o.by), o.by)}\n\n${formatSessions(sessions)}`
+        ? `${header}\n\n${formatSessions(sessions)}\n\n${formatGroups(groupSessions(sessions, o.by), o.by)}`
         : `${header}\n\nNo sessions match.`);
     }
     break;
